@@ -73,11 +73,17 @@ func (seg *Segmenter) Next() bool {
 	start, end, err := seg.f(seg.data[seg.current.end:], true)
 	seg.err = err
 
-	if err != nil {
+	if seg.err != nil {
 		return false
 	}
 
-	if end == 0 {
+	if start > end {
+		seg.err = fmt.Errorf("the start of the next segment (%d) is greater than the end (%d); this is likely a bug in the SegmentFunc",
+			start, end)
+		return false
+	}
+
+	if end == 0 || start == end { // i.e. no segment
 		return false
 	}
 
