@@ -23,7 +23,7 @@ func NewSegmenter(p []byte) *segment.Segmenter {
 	return segment
 }
 
-var (
+const (
 	_AHLetter   = _ALetter | _HebrewLetter
 	_MidNumLetQ = _MidNumLet | _SingleQuote
 	_Ignore     = _Extend | _Format | _ZWJ
