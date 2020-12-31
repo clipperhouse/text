@@ -26,8 +26,8 @@ type Segmenter struct {
 	f    SegmentFunc
 	data []byte
 
-	current  span
-	previous *stack
+	start, end int
+	previous   *stack
 
 	err error
 }
@@ -49,7 +49,8 @@ func New(f SegmentFunc) *Segmenter {
 func (sc *Segmenter) SetText(data []byte) {
 	sc.data = data
 
-	sc.current = zero
+	sc.start = 0
+	sc.end = 0
 	sc.previous.clear()
 	sc.err = nil
 }
@@ -66,11 +67,11 @@ func (sc *Segmenter) SetText(data []byte) {
 //		log.Fatal(err)
 //	}
 func (seg *Segmenter) Next() bool {
-	if seg.current.end == len(seg.data) {
+	if seg.end == len(seg.data) {
 		return false
 	}
 
-	start, end, err := seg.f(seg.data[seg.current.end:], true)
+	start, end, err := seg.f(seg.data[seg.end:], true)
 	seg.err = err
 
 	if seg.err != nil {
@@ -87,22 +88,18 @@ func (seg *Segmenter) Next() bool {
 		return false
 	}
 
-	next := span{
-		start: seg.current.end + start,
-		end:   seg.current.end + end,
-	}
-
-	if next.end > len(seg.data) {
+	if end > len(seg.data) {
 		seg.err = fmt.Errorf("the end of the next segment (%d) exceeds the length of the text (%d); this is likely a bug in the SegmentFunc",
-			next.end, len(seg.data))
+			end, len(seg.data))
 		return false
 	}
 
-	if seg.current != zero {
-		seg.previous.push(seg.current)
+	if seg.end != 0 {
+		seg.previous.push(seg.start, seg.end)
 	}
 
-	seg.current = next
+	seg.start = seg.end + start
+	seg.end = seg.end + end
 
 	return true
 }
@@ -110,8 +107,9 @@ func (seg *Segmenter) Next() bool {
 // Previous moves the segmenter to the previous segment. It returns false when there
 // are no remaining previous segments, or an error occurred.
 func (seg *Segmenter) Previous() bool {
-	if previous, exists := seg.previous.pop(); exists {
-		seg.current = previous
+	if start, end, exists := seg.previous.pop(); exists {
+		seg.start = start
+		seg.end = end
 		return true
 	}
 
@@ -120,13 +118,13 @@ func (seg *Segmenter) Previous() bool {
 
 // Start is the index of the first byte of the current segment
 func (seg *Segmenter) Start() int {
-	return seg.current.start
+	return seg.start
 }
 
 // End is the index of the first byte following the end of the current segment.
 // The bytes of the current segment are data[segment.Start():segment.End()]
 func (seg *Segmenter) End() int {
-	return seg.current.end
+	return seg.end
 }
 
 // Err indicates an error occured when calling Next() or Previous(). Next and
@@ -137,7 +135,7 @@ func (seg *Segmenter) Err() error {
 
 // Bytes returns the current segment
 func (seg *Segmenter) Bytes() []byte {
-	return seg.data[seg.current.start:seg.current.end]
+	return seg.data[seg.start:seg.end]
 }
 
 var ErrIncompleteRune = errors.New("incomplete rune")
