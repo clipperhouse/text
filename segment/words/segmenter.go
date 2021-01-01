@@ -49,7 +49,7 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 		if eot {
 			if !atEOF {
 				// Token extends past current data
-				return 0, 0, segment.ErrIncompleteToken
+				return 0, pos, segment.ErrIncompleteToken
 			}
 
 			// https://unicode.org/reports/tr29/#WB2
@@ -63,13 +63,8 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 
 		current, w = trie.lookup(data[pos:])
 		if w == 0 {
-			if atEOF {
-				// Just return the bytes, we can't do anything with them
-				pos = len(data)
-				break
-			}
-			// Rune extends past current data, request more
-			return 0, 0, segment.ErrIncompleteRune
+			// Rune extends past current data
+			return 0, pos, segment.ErrIncompleteRune
 		}
 
 		// https://unicode.org/reports/tr29/#WB1
