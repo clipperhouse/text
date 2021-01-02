@@ -26,6 +26,5 @@ func NewScanner(r io.Reader) *bufio.Scanner {
 	return scanner
 }
 
-func SplitFunc(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	return segment.AsSplitFunc(SegmentFunc, data, atEOF)
-}
+// SplitFunc is a bufio.SplitFunc for use with bufio.Scanner. Use NewScanner for convenience.
+var SplitFunc = segment.ToSplitFunc(SegmentFunc)

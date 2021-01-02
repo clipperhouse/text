@@ -141,25 +141,27 @@ func (seg *Segmenter) Bytes() []byte {
 var ErrIncompleteRune = errors.New("incomplete rune")
 var ErrIncompleteToken = errors.New("incomplete token")
 
-// AsSplitFunc maps a SegmentFunc to a bufio.SplitFunc, as a convenience
-func AsSplitFunc(f SegmentFunc, data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if len(data) == 0 {
-		return 0, nil, nil
-	}
-
-	start, end, err := f(data, atEOF)
-
-	if err != nil && !atEOF {
-		if errors.Is(err, ErrIncompleteRune) {
-			// Rune extends past current data, request more
+// ToSplitFunc maps a SegmentFunc to a bufio.SplitFunc, as a convenience
+func ToSplitFunc(f SegmentFunc) func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	return func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if len(data) == 0 {
 			return 0, nil, nil
 		}
 
-		if errors.Is(err, ErrIncompleteToken) {
-			// Token extends past current data, request more
-			return 0, nil, nil
-		}
-	}
+		start, end, err := f(data, atEOF)
 
-	return end, data[start:end], err
+		if err != nil && !atEOF {
+			if errors.Is(err, ErrIncompleteRune) {
+				// Rune extends past current data, request more
+				return 0, nil, nil
+			}
+
+			if errors.Is(err, ErrIncompleteToken) {
+				// Token extends past current data, request more
+				return 0, nil, nil
+			}
+		}
+
+		return end, data[start:end], err
+	}
 }
