@@ -140,14 +140,12 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 			}
 		}
 
-		nextPos := pos + w
-
 		// Optimization: determine if WB6 can possibly apply
 		maybeWB6 := current.is(_MidLetter|_MidNumLetQ) && last.is(_AHLetter|_Ignore)
 
 		// https://unicode.org/reports/tr29/#WB6
 		if maybeWB6 {
-			if subsequent(_AHLetter, data[nextPos:]) && previous(_AHLetter, data[:pos]) {
+			if subsequent(_AHLetter, data[pos+w:]) && previous(_AHLetter, data[:pos]) {
 				pos += w
 				continue
 			}
@@ -181,7 +179,7 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 
 		// https://unicode.org/reports/tr29/#WB7b
 		if maybeWB7b {
-			if subsequent(_HebrewLetter, data[nextPos:]) && previous(_HebrewLetter, data[:pos]) {
+			if subsequent(_HebrewLetter, data[pos+w:]) && previous(_HebrewLetter, data[:pos]) {
 				pos += w
 				continue
 			}
@@ -261,7 +259,7 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 
 		// https://unicode.org/reports/tr29/#WB12
 		if maybeWB12 {
-			if subsequent(_Numeric, data[nextPos:]) && previous(_Numeric, data[:pos]) {
+			if subsequent(_Numeric, data[pos+w:]) && previous(_Numeric, data[:pos]) {
 				pos += w
 				continue
 			}
