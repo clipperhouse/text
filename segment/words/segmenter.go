@@ -200,7 +200,8 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 		}
 
 		// https://unicode.org/reports/tr29/#WB8
-		if current.is(_Numeric) && last.is(_Numeric|_Ignore) {
+		// https://unicode.org/reports/tr29/#WB9
+		if current.is(_Numeric) && last.is(_Numeric|_AHLetter|_Ignore) {
 			// Hot path: WB8 applies, and maybe a run
 			if last.is(_Numeric) {
 				pos += w
@@ -220,18 +221,12 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 				continue
 			}
 
-			// Otherwise, do proper lookback
+			// Otherwise, do proper lookbacks
 			if previous(_Numeric, data[:pos]) {
 				pos += w
 				continue
 			}
-		}
 
-		// Optimization: determine if WB9 can possibly apply
-		maybeWB9 := current.is(_Numeric) && last.is(_AHLetter|_Ignore)
-
-		// https://unicode.org/reports/tr29/#WB9
-		if maybeWB9 {
 			if previous(_AHLetter, data[:pos]) {
 				pos += w
 				continue
