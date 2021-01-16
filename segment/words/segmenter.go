@@ -112,14 +112,17 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 		// The previous/subsequent methods are shorthand for "seek a property but skip over Extend|Format|ZWJ on the way"
 
 		// https://unicode.org/reports/tr29/#WB5
-		if current.is(_AHLetter) && last.is(_AHLetter|_Ignore) {
-			// Hot path: WB5 applies, and maybe a run
-			if last.is(_AHLetter) {
+		// https://unicode.org/reports/tr29/#WB8
+		// https://unicode.org/reports/tr29/#WB9
+		// https://unicode.org/reports/tr29/#WB10
+		if current.is(_Numeric|_AHLetter) && last.is(_Numeric|_AHLetter|_Ignore) {
+			// Hot path: WB5/8/9/10 applies, and maybe a run
+			if last.is(_Numeric | _AHLetter) {
 				pos += w
 				for pos < len(data) {
 					lookup, w2 := trie.lookup(data[pos:])
 
-					if !lookup.is(_AHLetter) {
+					if !lookup.is(_Numeric | _AHLetter) {
 						break
 					}
 
@@ -133,7 +136,7 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 			}
 
 			// Otherwise, do proper lookback
-			if previous(_AHLetter, data[:pos]) {
+			if previous(_Numeric|_AHLetter, data[:pos]) {
 				pos += w
 				continue
 			}
@@ -196,36 +199,6 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 			}
 		}
 
-		// https://unicode.org/reports/tr29/#WB8
-		// https://unicode.org/reports/tr29/#WB9
-		// https://unicode.org/reports/tr29/#WB10
-		if current.is(_Numeric|_AHLetter) && last.is(_Numeric|_AHLetter|_Ignore) {
-			// Hot path: WB8/9/10 applies, and maybe a run
-			if last.is(_Numeric | _AHLetter) {
-				pos += w
-				for pos < len(data) {
-					lookup, w2 := trie.lookup(data[pos:])
-
-					if !lookup.is(_Numeric | _AHLetter) {
-						break
-					}
-
-					// Update stateful vars
-					current = lookup
-					w = w2
-
-					pos += w
-				}
-				continue
-			}
-
-			// Otherwise, do proper lookback
-			if previous(_Numeric|_AHLetter, data[:pos]) {
-				pos += w
-				continue
-			}
-		}
-
 		// Optimization: determine if WB11 can possibly apply
 		maybeWB11 := current.is(_Numeric) && last.is(_MidNum|_MidNumLetQ|_Ignore)
 
@@ -239,7 +212,7 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 		}
 
 		// Optimization: determine if WB12 can possibly apply
-		maybeWB12 := current.is(_MidNum|_MidNumLet|_SingleQuote) && last.is(_Numeric|_Ignore)
+		maybeWB12 := current.is(_MidNum|_MidNumLetQ) && last.is(_Numeric|_Ignore)
 
 		// https://unicode.org/reports/tr29/#WB12
 		if maybeWB12 {
