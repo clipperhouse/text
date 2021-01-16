@@ -37,7 +37,6 @@ func (lookup property) is(properties property) bool {
 }
 
 func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
-
 	// These vars are stateful across loop iterations
 	var pos, w int
 	var current property
@@ -199,14 +198,15 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 
 		// https://unicode.org/reports/tr29/#WB8
 		// https://unicode.org/reports/tr29/#WB9
-		if current.is(_Numeric) && last.is(_Numeric|_AHLetter|_Ignore) {
-			// Hot path: WB8 applies, and maybe a run
-			if last.is(_Numeric) {
+		// https://unicode.org/reports/tr29/#WB10
+		if current.is(_Numeric|_AHLetter) && last.is(_Numeric|_AHLetter|_Ignore) {
+			// Hot path: WB8/9/10 applies, and maybe a run
+			if last.is(_Numeric | _AHLetter) {
 				pos += w
 				for pos < len(data) {
 					lookup, w2 := trie.lookup(data[pos:])
 
-					if !lookup.is(_Numeric) {
+					if !lookup.is(_Numeric | _AHLetter) {
 						break
 					}
 
@@ -219,24 +219,8 @@ func SegmentFunc(data []byte, atEOF bool) (start int, end int, err error) {
 				continue
 			}
 
-			// Otherwise, do proper lookbacks
-			if previous(_Numeric, data[:pos]) {
-				pos += w
-				continue
-			}
-
-			if previous(_AHLetter, data[:pos]) {
-				pos += w
-				continue
-			}
-		}
-
-		// Optimization: determine if WB10 can possibly apply
-		maybeWB10 := current.is(_AHLetter) && last.is(_Numeric|_Ignore)
-
-		// https://unicode.org/reports/tr29/#WB10
-		if maybeWB10 {
-			if previous(_Numeric, data[:pos]) {
+			// Otherwise, do proper lookback
+			if previous(_Numeric|_AHLetter, data[:pos]) {
 				pos += w
 				continue
 			}
